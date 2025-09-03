@@ -107,3 +107,127 @@ db.Productos.insertMany([
 console.log("\n==Find: Todos los productos con solo sku, nombre y precio.");
 printjson(
 db.Productos.find({},{sku: 1, nombre: 1, precio:1, _id: 0}).toArray());
+
+
+console.log("\n==Find: Productos con precio mayor a 10,000 CRC ordenados descendentemente.");
+printjson(
+db.Productos.find({precio: {$gt: 10000}}, {_id: 0}).sort({precio: -1}));
+
+
+console.log("\n==Find: Productos de la categoría Seguridad o Pinturas.");
+printjson(
+db.Productos.find({categoria: {$in: ["Seguridad", "Pinturas"]}}, {_id: 0}));
+
+
+console.log("\n==Find: Productos con stock entre 10 y 30 unidades.");
+printjson(
+db.Productos.find({stock: {$gte: 10, $lte: 30}}, {_id: 0}));
+
+
+console.log("\n==Find: Productos cuyo nombre empiece con la letra P, sin importar mayúsculas o minúsculas.");
+printjson(
+db.Productos.find({nombre: {$regex: /^P/i}}, {_id: 0}));
+
+
+console.log("\n==Find: Paginación mostrando 5 productos después de saltar 3, ordenados por nombre.");
+printjson(
+db.Productos.find({}, {_id: 0}).sort({nombre: 1}).skip(3).limit(5));
+
+//Parte B: Updates:
+
+console.log("\n==Update: Cambiar el precio de un producto específico a un nuevo valor.");
+// Cambiar el precio del producto con sku "P001" a 8000 CRC
+printjson(
+db.Productos.updateOne(
+  {sku: "P001"},
+  {$set: {precio: 8000}}
+)
+);
+
+
+console.log("\n==Update: Incrementar el stock de un producto en una cantidad determinada.");
+// Incrementar el stock del producto con sku "P002" en 15 unidades
+printjson(
+db.Productos.updateOne(
+  {sku: "P002"},
+  {$inc: {stock: 15}}
+)
+);
+
+
+console.log("\n==Update: Agregar un nuevo campo tags a un producto con un arreglo de etiquetas.");
+// Agregar tags al producto con sku "P003"
+printjson(
+db.Productos.updateOne(
+  {sku: "P003"},
+  {$set: {tags: ["herramienta", "ajuste", "mecánica"]}}
+)
+);
+
+
+console.log("\n==Update: Normalizar el nombre de un producto.");
+// Cambiar 'Llave Inglesa 10"' por 'Llave Ajustable 10 Pulgadas'
+printjson(
+db.Productos.updateOne(
+  {sku: "P003"},
+  {$set: {nombre: "Llave Ajustable 10 Pulgadas"}}
+)
+);
+
+
+//Parte C:Upsert
+console.log("\n==Upsert: Actualizar stock si existe, insertar si no existe.");
+
+// Upsert para el producto con sku "P013"
+printjson(
+db.Productos.updateOne(
+  {sku: "P013"},
+  {
+    $set: {
+      nombre: "Alicate de Punta 8\"",
+      categoria: "Herramientas",
+      precio: 6800,
+      stock: 25,
+      creadoEn: new Date(),
+      descripcion: "Alicate de punta para trabajos de precisión",
+      marca: "HerraPro"
+    },
+    $setOnInsert: {
+      tags: ["herramienta", "precision", "electricidad"],
+      proveedor: {
+        nombre: "ProveTools SA",
+        telefono: "+506 2222-3333",
+        email: "ventas@provetools.com"
+      }
+    }
+  },
+  {upsert: true}
+)
+);
+// Verificar el resultado
+console.log("\n==Verificación del upsert:");
+printjson(db.Productos.find({sku: "P013"}, {_id: 0}));
+
+
+//Parte D:Deletes
+
+console.log("\n==Delete: Eliminar un producto específico por su sku.");
+// Eliminar el producto con sku "P012"
+printjson(
+db.Productos.deleteOne(
+  {sku: "P012"}
+)
+);
+
+
+console.log("\n==Delete: Eliminar todos los productos con stock menor a 10 unidades.");
+// Eliminar productos con stock menor a 10
+printjson(
+db.Productos.deleteMany(
+  {stock: {$lt: 10}}
+)
+);
+
+
+console.log("\n==Verificación después de las eliminaciones:");
+printjson(db.Productos.find({}, {_id: 0}).sort({sku: 1}).toArray());
