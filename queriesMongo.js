@@ -289,3 +289,36 @@ db.Productos.aggregate([
 ]).toArray()
 );
 
+
+
+/*
+5,6,7,8
+
+
+
+*/
+
+console.log("\n==Agregación: Productos creados en rango de fechas (ej: marzo 2025).");
+printjson(
+db.Productos.aggregate([
+  {
+    $match: {
+      creadoEn: {
+        $gte: ISODate("2025-03-01T00:00:00Z"),
+        $lte: ISODate("2025-03-31T23:59:59Z")
+      }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      sku: 1,
+      nombre: 1,
+      categoria: 1,
+      precio: 1,
+      creadoEn: 1
+    }
+  },
+  {$sort: {creadoEn: 1}}
+]).toArray()
+);
