@@ -232,7 +232,6 @@ db.Productos.deleteMany(
 console.log("\n==Verificación después de las eliminaciones:");
 printjson(db.Productos.find({}, {_id: 0}).sort({sku: 1}).toArray());
 
-
 //Parte E: Agregaciones
 console.log("\n==Agregación: Precio promedio, mínimo y máximo por categoría.");
 printjson(
@@ -322,3 +321,106 @@ db.Productos.aggregate([
   {$sort: {creadoEn: 1}}
 ]).toArray()
 );
+
+console.log("\n==	Calcular	el	valor	total	de	inventario	agrupado	por	día	de	creación.");
+printjson(db.Productos.aggregate([
+  {$group: {_id: { $dateToString: { format: "%Y-%m-%d", date: "$creadoEn" } }, totalInventario: { $sum: { $multiply: ["$precio", "$stock"] } }}},
+  { $sort: { _id: 1 } },
+]));
+
+console.log("\n==Agregación: 	reporte	múltiple	con	$facet	que	incluya:	top	3	productos	caros,	resumen	por	categoría	y	productos	con	'Pro'.	");
+printjson(db.Productos.aggregate([ { $facet: {
+ top3: [
+ { $sort: { precio: -1 } },
+ { $limit: 3 },
+ { $project: { _id: 0, sku: 1, nombre: 1, precio: 1} }
+ ],
+ porCategoría: [
+ { $group: { _id: "$categoria", total: { $sum: 1 }, promedioPrecio: { $avg: "$precio" }, productos: {
+  $push: {sku: "$sku", nombre: "$nombre",precio: "$precio",stock: "$stock"
+  }}} },
+ {$project: {categoria: "$_id",totalProductos: 1,promedioPrecio: { $round: ["$promedioPrecio", 2] },productos: 1,_id: 0}}
+
+ ],
+ productosConPRO: [
+{ $match: {nombre: /Pro/i  } },
+        { $project: { sku: 1, nombre: 1, precio: 1, _id: 0 } }
+ ]
+ }}
+]))
+
+
+
+
+console.log("\n==Agregación: catálogo	resumido	por	categoría	con	los	5	productos	más	caros	y	nombres	representativos.");
+printjson(db.Productos.aggregate([
+  {$bucket: { groupBy: "$stock",
+      boundaries: [0, 20, 50, 100],
+      default: "Fuera de rango",
+      output: { productos: {
+          $push: {
+            sku: "$sku",
+            nombre: "$nombre",
+            stock: "$stock",
+            categoria: "$categoria"
+          }
+        },cantidad: { $sum: 1 },
+        stockPromedio: { $avg: "$stock" }
+      }
+    }
+  },
+  {
+    $project: {
+      rangoStock: {
+        $switch: {
+          branches: [
+            { case: { $eq: ["$_id", 0] }, then: "Bajo (0-19)" },
+            { case: { $eq: ["$_id", 20] }, then: "Medio (20-49)" },
+            { case: { $eq: ["$_id", 50] }, then: "Alto (50+)" }
+          ],
+          default: "Fuera de rango"
+        }
+      },
+      productos: 1,
+      cantidad: 1,
+      stockPromedio: { $round: ["$stockPromedio", 1] },
+      _id: 0
+    }
+  }
+]));
+
+
+console.log("\n==Agregación: lista de	productos	que	contengan	comillas	en	su	nombre.	");
+printjson(db.Productos.aggregate([
+  { $match: { nombre: { $regex: "\"" } } },
+  { $project: { sku: 1, nombre: 1, _id: 0 } }
+]));
+
+console.log("\n==Agregación: catálogo	resumido	por	categoría	con	los	5	productos	más	caros	y	nombres	representativos.");
+printjson(db.Productos.aggregate([
+  {$sort: { precio: -1 }},
+  {$group: {_id: "$categoria",
+      productos: {
+        $push: {nombre: "$nombre",precio: "$precio"}}}
+  },
+  {
+    $project: {categoria: "$_id",top5: { $slice: ["$productos", 5] },_id: 0
+    }
+  }
+]));
+
+
+
+
+console.log("\n==Agregación: campo	derivado	precioConIVA	(13%)	y	mostrarlo	en	un	reporte.");
+printjson(db.Productos.aggregate([
+  {
+    $project: {
+      sku:1,
+      precioSinIVA: "$precio",
+      precioConIVA: { $multiply: ["$precio", 1.13] },
+      _id: 0
+    }
+  }]));
+
+
