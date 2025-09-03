@@ -443,6 +443,23 @@ printjson(db.Productos.aggregate([
 ]));
 
 
+console.log("\n==	Clasificar	productos	como	Caros	o	Baratos/Promedio	en	relación	con	el	precio	promedio general.");
+printjson(db.Productos.aggregate([
+  {$facet: {promedio: [{ $group: { _id: null, precioPromedio: { $avg: "$precio" } } }],
+      productos: [{ $project: { sku: 1, nombre: 1, precio: 1, categoria: 1 } }]
+    }
+  },
+  { $unwind: "$promedio" },
+  {$project: {productos: {
+        $map: {input: "$productos", as: "p", in: {sku: "$$p.sku", nombre: "$$p.nombre",
+  precio: "$$p.precio", categoria: "$$p.categoria",
+clasificacion: {$cond: [{ $gt: ["$$p.precio", "$promedio.precioPromedio"] },"Caro","Barato/Promedio"]}}
+        }
+      }
+    }
+  }
+]));
+
 console.log("\n==Agregación: productos	por	palabras	clave	en	el	nombre	(ejemplo:	'Pintura',	'Seguridad','Eléctrico').");
 printjson(db.Productos.aggregate([
   {
