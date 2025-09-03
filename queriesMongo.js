@@ -136,6 +136,8 @@ db.Productos.find({}, {_id: 0}).sort({nombre: 1}).skip(3).limit(5));
 //Parte B: Updates:
 
 console.log("\n==Update: Cambiar el precio de un producto específico a un nuevo valor.");
+console.log("\n==Antes:");
+printjson(db.Productos.find({sku: "P001"}, {_id: 0, sku:1, precio: 1}));
 // Cambiar el precio del producto con sku "P001" a 8000 CRC
 printjson(
 db.Productos.updateOne(
@@ -143,29 +145,39 @@ db.Productos.updateOne(
   {$set: {precio: 8000}}
 )
 );
-
+console.log("\n==Después del update:");
+printjson(db.Productos.find({sku: "P001"}, {_id: 0, sku:1, precio: 1}));
 
 console.log("\n==Update: Incrementar el stock de un producto en una cantidad determinada.");
 // Incrementar el stock del producto con sku "P002" en 15 unidades
+console.log("\n==Antes:");
+printjson(db.Productos.find({sku: "P002"}, {_id: 0, sku:1, stock: 1}));
 printjson(
 db.Productos.updateOne(
   {sku: "P002"},
   {$inc: {stock: 15}}
 )
 );
+console.log("\n==Después del update:");
+printjson(db.Productos.find({sku: "P002"}, {_id: 0, sku:1, stock: 1}));
 
 
 console.log("\n==Update: Agregar un nuevo campo tags a un producto con un arreglo de etiquetas.");
-// Agregar tags al producto con sku "P003"
+console.log("\n==Antes:");
+var prueba = db.Productos.findOne({ sku: "P003" });
+printjson(prueba);
 printjson(
 db.Productos.updateOne(
   {sku: "P003"},
   {$set: {tags: ["herramienta", "ajuste", "mecánica"]}}
 )
 );
-
+console.log("\n==Después del update:");
+printjson(db.Productos.find({sku: "P003"}, {_id: 0, sku:1, tags: 1}));
 
 console.log("\n==Update: Normalizar el nombre de un producto.");
+console.log("\n==Antes:");
+printjson(db.Productos.find({sku: "P003"}, {_id: 0, sku:1, nombre: 1}));
 // Cambiar 'Llave Inglesa 10"' por 'Llave Ajustable 10 Pulgadas'
 printjson(
 db.Productos.updateOne(
@@ -173,7 +185,8 @@ db.Productos.updateOne(
   {$set: {nombre: "Llave Ajustable 10 Pulgadas"}}
 )
 );
-
+console.log("\n==Después del update:");
+printjson(db.Productos.find({sku: "P003"}, {_id: 0, sku:1, nombre: 1}));
 
 //Parte C:Upsert
 console.log("\n==Upsert: Actualizar stock si existe, insertar si no existe.");
@@ -417,7 +430,41 @@ db.Productos.aggregate([
 ]).toArray()
 );
 
-console.log("\n==	Calcular	el	valor	total	de	inventario	agrupado	por	día	de	creación.");
+console.log("\n==Agregación: Listar	etiquetas	únicas	por	categoría");
+printjson(db.Productos.aggregate([
+  { $match: { tags: { $exists: true } } }, 
+  { $unwind: "$tags" },                   
+  { 
+    $group: {
+      _id: "$categoria",
+      etiquetas: { $addToSet: "$tags" }   
+    }
+  }
+]));
+
+
+console.log("\n==Agregación: productos	por	palabras	clave	en	el	nombre	(ejemplo:	'Pintura',	'Seguridad','Eléctrico').");
+printjson(db.Productos.aggregate([
+  {
+    $facet: {
+      Pintura: [
+        { $match: { nombre: /Pintura/i } },
+        { $count: "total" }
+      ],
+      Seguridad: [
+        { $match: { nombre: /Seguridad/i } },
+        { $count: "total" }
+      ],
+      Electrico: [
+        { $match: { nombre: /^El[ée]ctr/i  } },
+        { $count: "total" }
+      ]
+    }
+  }
+]));
+  
+      
+console.log("\n==Agregación: Calcular	el	valor	total	de	inventario	agrupado	por	día	de	creación.");
 printjson(db.Productos.aggregate([
   {$group: {_id: { $dateToString: { format: "%Y-%m-%d", date: "$creadoEn" } }, totalInventario: { $sum: { $multiply: ["$precio", "$stock"] } }}},
   { $sort: { _id: 1 } },
@@ -442,7 +489,7 @@ printjson(db.Productos.aggregate([ { $facet: {
         { $project: { sku: 1, nombre: 1, precio: 1, _id: 0 } }
  ]
  }}
-]))
+]));
 
 
 
