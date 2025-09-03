@@ -1,6 +1,6 @@
-use("Ferreteria");
+//Sebástián Donoso y Rachell Leiva
 
-db.Productos.drop();
+use("Ferreteria");
 
 db.createCollection("Productos", { 
   validator: {
