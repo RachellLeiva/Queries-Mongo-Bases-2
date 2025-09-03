@@ -289,13 +289,108 @@ db.Productos.aggregate([
 );
 
 
+console.log("\n==Agregación: Histograma de precios por rangos definidos (bucket).");
+printjson(
+db.Productos.aggregate([
+  {
+    $bucket: {
+      groupBy: "$precio",
+      boundaries: [0, 5000, 10000, 20000, 50000, 100000],
+      default: "Mayor a 100000",
+      output: {
+        count: {$sum: 1},
+        productos: {$push: {nombre: "$nombre", precio: "$precio"}}
+      }
+    }
+  }
+]).toArray()
+);
 
-/*
-5,6,7,8
+
+console.log("\n==Agregación: Histograma automático de precios (bucketAuto).");
+printjson(
+db.Productos.aggregate([
+  {
+    $bucketAuto: {
+      groupBy: "$precio",
+      buckets: 5,
+      output: {
+        count: {$sum: 1},
+        rango: {$push: {min: {$min: "$precio"}, max: {$max: "$precio"}}},
+        productos: {$push: {nombre: "$nombre", precio: "$precio"}}
+      }
+    }
+  }
+]).toArray()
+);
 
 
+console.log("\n==Agregación: Top 3 productos más caros por categoría (ranking interno).");
+printjson(
+db.Productos.aggregate([
+  {
+    $sort: {categoria: 1, precio: -1}
+  },
+  {
+    $group: {
+      _id: "$categoria",
+      productos: {$push: {nombre: "$nombre", precio: "$precio", sku: "$sku"}}
+    }
+  },
+  {
+    $project: {
+      categoria: "$_id",
+      top3: {$slice: ["$productos", 3]},
+      _id: 0
+    }
+  }
+]).toArray()
+);
 
-*/
+console.log("\n==Agregación: Productos con 'Pro' en nombre y porcentaje por categoría.");
+printjson(
+db.Productos.aggregate([
+  // Contar total por categoría
+  {
+    $group: {
+      _id: "$categoria",
+      totalCategoria: {$sum: 1}
+    }
+  },
+  // Unir con productos que contienen "Pro"
+  {
+    $lookup: {
+      from: "Productos",
+      let: {categoria: "$_id"},
+      pipeline: [
+        {
+          $match: {
+            $expr: {$eq: ["$categoria", "$$categoria"]},
+            nombre: {$regex: "Pro", $options: "i"}
+          }
+        }
+      ],
+      as: "productosPro"
+    }
+  },
+  // Calcular porcentaje
+  {
+    $project: {
+      categoria: "$_id",
+      totalProductos: "$totalCategoria",
+      productosPro: {$size: "$productosPro"},
+      porcentaje: {
+        $multiply: [
+          {$divide: [{$size: "$productosPro"}, "$totalCategoria"]},
+          100
+        ]
+      }
+    }
+  },
+  {$sort: {porcentaje: -1}}
+]).toArray()
+);
+
 
 console.log("\n==Agregación: Productos creados en rango de fechas (ej: marzo 2025).");
 printjson(
