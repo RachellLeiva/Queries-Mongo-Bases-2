@@ -231,3 +231,61 @@ db.Productos.deleteMany(
 
 console.log("\n==Verificación después de las eliminaciones:");
 printjson(db.Productos.find({}, {_id: 0}).sort({sku: 1}).toArray());
+
+
+//Parte E: Agregaciones
+console.log("\n==Agregación: Precio promedio, mínimo y máximo por categoría.");
+printjson(
+db.Productos.aggregate([
+  {
+    $group: {
+      _id: "$categoria",
+      precioPromedio: {$avg: "$precio"},
+      precioMinimo: {$min: "$precio"},
+      precioMaximo: {$max: "$precio"},
+      cantidadProductos: {$sum: 1}
+    }
+  },
+  {$sort: {_id: 1}}
+]).toArray()
+);
+
+
+console.log("\n==Agregación: Valor total de inventario por categoría (precio * stock).");
+printjson(
+db.Productos.aggregate([
+  {
+    $group: {
+      _id: "$categoria",
+      valorTotalInventario: {$sum: {$multiply: ["$precio", "$stock"]}},
+      totalProductos: {$sum: 1}
+    }
+  },
+  {$sort: {valorTotalInventario: -1}}
+]).toArray()
+);
+
+
+console.log("\n==Agregación: Top 3 de productos más caros.");
+printjson(
+db.Productos.aggregate([
+  {$sort: {precio: -1}},
+  {$limit: 3},
+  {$project: {_id: 0, sku: 1, nombre: 1, categoria: 1, precio: 1}}
+]).toArray()
+);
+
+
+console.log("\n==Agregación: Cantidad de productos por categoría.");
+printjson(
+db.Productos.aggregate([
+  {
+    $group: {
+      _id: "$categoria",
+      cantidad: {$sum: 1}
+    }
+  },
+  {$sort: {cantidad: -1}}
+]).toArray()
+);
+
